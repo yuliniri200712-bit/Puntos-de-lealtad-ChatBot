@@ -1,0 +1,522 @@
+{
+  "name": "DeliveryBot - Cafeteria (Puntos de Lealtad)",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "8fe0cc27-16c8-4431-b135-c375637c734e",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        112
+      ],
+      "webhookId": "e785d2f9-aba6-49cb-8809-46739247ed75",
+      "credentials": {
+        "telegramApi": {
+          "id": "fW2yPgrOPQeFM7zM",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "=Eres DeliveryBot, el asistente conversacional de una cafeteria que opera dentro de Telegram. Atiendes a los clientes para gestionar sus pedidos y su programa de puntos de lealtad.\n\nFECHA/HORA: usa {{ $now.toFormat('yyyy-MM-dd') }} para la fecha y {{ $now.toFormat('HH:mm') }} para la hora cuando registres pedidos.\nID DEL USUARIO ACTUAL (telegram_id): {{ $json.message.from.id }}\nNOMBRE DEL USUARIO: {{ $json.message.from.first_name }}\n\nMENU PRINCIPAL - cuando el usuario salude o pida ayuda, muestra estas opciones:\n1. Ver el menu\n2. Realizar un pedido\n3. Consultar el estado de mi pedido\n4. Ver mis Puntos\n\nHERRAMIENTAS DISPONIBLES:\n- get_menu: lee la hoja MENU (bebidas, comidas, snacks) con precios y stock.\n- create_order: registra un nuevo pedido en la hoja PEDIDOS (genera un id_pedido unico, estado inicial \"Recibido\").\n- get_order_status: consulta el estado de un pedido por su id_pedido en la hoja PEDIDOS.\n- get_user_points: lee el registro del usuario en la hoja USUARIOS por su telegram_id (nombre y puntos_lealtad actuales).\n- update_user_points: actualiza los puntos de lealtad del usuario en la hoja USUARIOS.\n\nFLUJO \"REALIZAR PEDIDO\":\n1. Muestra el menu con get_menu y ayuda al usuario a elegir productos y cantidades.\n2. Confirma el pedido con el total antes de registrarlo (ej.: \"Llevas 1 Cafe + 1 Empanada. Total $15.00. Confirmas?\").\n3. Al confirmar, usa create_order con id_usuario = telegram_id del usuario, la fecha y hora actuales y estado \"Recibido\".\n\nSISTEMA DE PUNTOS DE LEALTAD (por cada pedido confirmado):\n1. Calcula los puntos ganados: 1 punto por cada $5.00 gastados. Usa la formula floor(total / 5).\n2. Con get_user_points obten el balance actual (puntos_lealtad) del usuario por su telegram_id.\n3. Suma los puntos ganados al balance actual y usa update_user_points para guardar el NUEVO total.\n\nOPCION \"4. VER MIS PUNTOS\":\n- Usa get_user_points con el telegram_id del usuario.\n- Responde exactamente con este formato:\n  \"Hola [Nombre], actualmente tienes puntos: [Puntos] puntos acumulados. Sigue comprando para canjear premios!\"\n  reemplazando [Nombre] por el nombre del usuario y [Puntos] por su balance de puntos_lealtad.\n\nSe claro, cordial y conciso. Responde siempre en espanol."
+        }
+      },
+      "id": "5f2d9bb8-00ea-4317-9c5a-6f72701c10c3",
+      "name": "DeliveryBot Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        544,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "c4f3b15c-9221-47d5-8d16-54220c0ca024",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        336
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "Gateway credits",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "id": "f6e530ee-af1e-4fcf-917b-59d56966509a",
+      "name": "Session Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        352,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1yfQcqd_ODwqzdHejPzk57fvu0Yv3-_r_h3zz3Idih5w",
+          "mode": "list",
+          "cachedResultName": "DeliveryBot_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yfQcqd_ODwqzdHejPzk57fvu0Yv3-_r_h3zz3Idih5w/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "MENU",
+          "cachedResultName": "MENU"
+        },
+        "options": {}
+      },
+      "id": "d9622542-eff6-41f7-ae8b-158b0eb2233f",
+      "name": "get_menu",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        480,
+        336
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "iF8sZtlymJqvu0nR",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1yfQcqd_ODwqzdHejPzk57fvu0Yv3-_r_h3zz3Idih5w",
+          "mode": "list",
+          "cachedResultName": "DeliveryBot_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yfQcqd_ODwqzdHejPzk57fvu0Yv3-_r_h3zz3Idih5w/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "PEDIDOS",
+          "cachedResultName": "PEDIDOS"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_pedido": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('id_pedido', 'Unique order number/ID for this order') }}",
+            "id_usuario": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('id_usuario', 'The telegram_id of the user placing the order') }}",
+            "nombre": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('nombre', 'The name of the user placing the order') }}",
+            "detalles_pedido": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('detalles_pedido', 'Order details: products and quantities as JSON or text') }}",
+            "total_pago": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('total_pago', 'Total amount of the order in dollars', 'number') }}",
+            "estado": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('estado', 'Order status, e.g. Recibido') }}",
+            "fecha": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fecha', 'Order date (YYYY-MM-DD)') }}",
+            "hora": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('hora', 'Order time (HH:mm)') }}"
+          },
+          "schema": [
+            {
+              "id": "id_pedido",
+              "displayName": "id_pedido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "id_usuario",
+              "displayName": "id_usuario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "detalles_pedido",
+              "displayName": "detalles_pedido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "total_pago",
+              "displayName": "total_pago",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "estado",
+              "displayName": "estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "hora",
+              "displayName": "hora",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ef8e08d2-1dc1-475e-9431-d1b74079c9e6",
+      "name": "create_order",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        608,
+        336
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "iF8sZtlymJqvu0nR",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1yfQcqd_ODwqzdHejPzk57fvu0Yv3-_r_h3zz3Idih5w",
+          "mode": "list",
+          "cachedResultName": "DeliveryBot_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yfQcqd_ODwqzdHejPzk57fvu0Yv3-_r_h3zz3Idih5w/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "PEDIDOS",
+          "cachedResultName": "PEDIDOS"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "id_pedido",
+              "lookupValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('id_pedido', 'The order ID to look up the status for') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "588fbc48-0c86-4c69-b689-4af78ce4fbbf",
+      "name": "get_order_status",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        736,
+        336
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "iF8sZtlymJqvu0nR",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1yfQcqd_ODwqzdHejPzk57fvu0Yv3-_r_h3zz3Idih5w",
+          "mode": "list",
+          "cachedResultName": "DeliveryBot_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yfQcqd_ODwqzdHejPzk57fvu0Yv3-_r_h3zz3Idih5w/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "USUARIOS",
+          "cachedResultName": "USUARIOS"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "telegram_id",
+              "lookupValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('telegram_id', 'The telegram_id of the user to look up') }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "b7c5b7c3-1136-439c-add7-a975a8fc18a5",
+      "name": "get_user_points",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        864,
+        336
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "iF8sZtlymJqvu0nR",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1yfQcqd_ODwqzdHejPzk57fvu0Yv3-_r_h3zz3Idih5w",
+          "mode": "list",
+          "cachedResultName": "DeliveryBot_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yfQcqd_ODwqzdHejPzk57fvu0Yv3-_r_h3zz3Idih5w/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "USUARIOS",
+          "cachedResultName": "USUARIOS"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "telegram_id"
+          ],
+          "value": {
+            "telegram_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('telegram_id', 'The telegram_id of the user whose points to update') }}",
+            "puntos_lealtad": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('puntos_lealtad', 'The NEW total loyalty points balance for this user (current balance + newly earned points)', 'number') }}"
+          },
+          "schema": [
+            {
+              "id": "telegram_id",
+              "displayName": "telegram_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "puntos_lealtad",
+              "displayName": "puntos_lealtad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a610fd6a-dff8-42a9-8e92-ae8638556b02",
+      "name": "update_user_points",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        992,
+        336
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "iF8sZtlymJqvu0nR",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Telegram Trigger\").item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "4c5f8832-8e87-446e-b4b7-a7ed745b8d57",
+      "name": "Responder al Cliente",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        112
+      ],
+      "webhookId": "31042a24-feab-45e2-a645-dd2465da2edb",
+      "credentials": {
+        "telegramApi": {
+          "id": "fW2yPgrOPQeFM7zM",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "DeliveryBot Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeliveryBot Agent": {
+      "main": [
+        [
+          {
+            "node": "Responder al Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "DeliveryBot Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "DeliveryBot Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_menu": {
+      "ai_tool": [
+        [
+          {
+            "node": "DeliveryBot Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_order": {
+      "ai_tool": [
+        [
+          {
+            "node": "DeliveryBot Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_order_status": {
+      "ai_tool": [
+        [
+          {
+            "node": "DeliveryBot Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_user_points": {
+      "ai_tool": [
+        [
+          {
+            "node": "DeliveryBot Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update_user_points": {
+      "ai_tool": [
+        [
+          {
+            "node": "DeliveryBot Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2bb0cf2e-0c41-425f-abb2-0c499eadad7a",
+  "meta": {
+    "instanceId": "e819ffda1f6b40d5ded826a96847f1e7d04de8e7056e1964db1a55f4e1b3fa74"
+  },
+  "nodeGroups": [],
+  "id": "R0UIkCtnlRibYy7O",
+  "tags": []
+}
